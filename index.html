@@ -1,0 +1,957 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema Barbearia - Controle Financeiro</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h1, h2 {
+            color: #2c3e50;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .card {
+            background-color: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 0 5px rgba(0,0,0,0.1);
+        }
+        .card h3 {
+            margin-top: 0;
+            color: #3498db;
+        }
+        .card-value {
+            font-size: 24px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            background-color: #eee;
+            margin-right: 5px;
+            border-radius: 5px 5px 0 0;
+        }
+        .tab.active {
+            background-color: #3498db;
+            color: white;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .porcentagem-container {
+            display: flex;
+            align-items: center;
+        }
+        .porcentagem-container input {
+            width: 80px;
+            margin-right: 5px;
+        }
+        .porcentagem-container span {
+            font-weight: bold;
+        }
+        .saldo-negativo {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+        .saldo-positivo {
+            color: #2ecc71;
+            font-weight: bold;
+        }
+        .aviso {
+            color: #e67e22;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        .alerta {
+            background-color: #fff3cd;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            border-left: 4px solid #ffc107;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Sistema Barbearia</h1>
+        <p>Controle de pagamentos, adiantamentos e distribuição de valores</p>
+        
+        <div class="tabs">
+            <div class="tab active" onclick="openTab('registrar')">Registrar Atendimento</div>
+            <div class="tab" onclick="openTab('adiantamentos')">Adiantamentos</div>
+            <div class="tab" onclick="openTab('relatorios')">Relatórios</div>
+            <div class="tab" onclick="openTab('pagamentos')">Pagamentos</div>
+            <div class="tab" onclick="openTab('config')">Configurações</div>
+        </div>
+        
+        <div id="registrar" class="tab-content active">
+            <h2>Registrar Novo Atendimento</h2>
+            <form id="atendimentoForm">
+                <div class="form-group">
+                    <label for="valor">Valor do Serviço (R$):</label>
+                    <input type="number" id="valor" step="0.01" min="0" required>
+                </div>
+                <div class="form-group">
+                    <label for="barbeiro">Barbeiro:</label>
+                    <select id="barbeiro" required>
+                        <option value="">Selecione o barbeiro</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="metodo">Método de Pagamento:</label>
+                    <select id="metodo" required>
+                        <option value="Dinheiro">Dinheiro</option>
+                        <option value="Cartão">Cartão</option>
+                        <option value="PIX">PIX</option>
+                        <option value="Transferência">Transferência</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="porcentagemBarbeiroAtual">Porcentagem do Barbeiro:</label>
+                    <div class="porcentagem-container">
+                        <input type="number" id="porcentagemBarbeiroAtual" min="0" max="100" value="60" required>
+                        <span>%</span>
+                    </div>
+                    <small>O restante será automaticamente calculado para o dono</small>
+                </div>
+                <button type="submit">Registrar Atendimento</button>
+            </form>
+            
+            <div id="resultado" style="margin-top: 20px; display: none;">
+                <h3>Distribuição do Valor</h3>
+                <p>Valor total: R$<span id="totalValue">0.00</span></p>
+                <p>Dono (<span id="porcentagemDonoDisplay">40</span>%): R$<span id="donoValue">0.00</span></p>
+                <p>Barbeiro (<span id="porcentagemBarbeiroDisplay">60</span>%): R$<span id="barbeiroValue">0.00</span></p>
+            </div>
+        </div>
+        
+        <div id="adiantamentos" class="tab-content">
+            <h2>Registrar Adiantamento</h2>
+            <form id="adiantamentoForm">
+                <div class="form-group">
+                    <label for="barbeiroAdiantamento">Barbeiro:</label>
+                    <select id="barbeiroAdiantamento" required onchange="atualizarSaldoDisponivel()">
+                        <option value="">Selecione o barbeiro</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="valorAdiantamento">Valor do Adiantamento (R$):</label>
+                    <input type="number" id="valorAdiantamento" step="0.01" min="0" required>
+                </div>
+                <div class="form-group">
+                    <label for="dataAdiantamento">Data:</label>
+                    <input type="date" id="dataAdiantamento" required>
+                </div>
+                <div class="form-group">
+                    <label for="observacaoAdiantamento">Observação:</label>
+                    <input type="text" id="observacaoAdiantamento">
+                </div>
+                <div id="infoSaldoBarbeiro" class="aviso" style="display: none;">
+                    Saldo disponível: R$<span id="saldoDisponivel">0.00</span>
+                </div>
+                <div id="alertaAdiantamento" class="alerta" style="display: none;"></div>
+                <button type="submit">Registrar Adiantamento</button>
+            </form>
+            
+            <h3 style="margin-top: 30px;">Histórico de Adiantamentos</h3>
+            <table id="adiantamentosTable">
+                <thead>
+                    <tr>
+                        <th>Data</th>
+                        <th>Barbeiro</th>
+                        <th>Valor (R$)</th>
+                        <th>Observação</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="adiantamentosBody">
+                    <!-- Dados serão inseridos via JavaScript -->
+                </tbody>
+            </table>
+        </div>
+        
+        <div id="relatorios" class="tab-content">
+            <h2>Relatórios Financeiros</h2>
+            
+            <div class="dashboard">
+                <div class="card">
+                    <h3>Total Recebido</h3>
+                    <div class="card-value" id="totalRecebido">R$0.00</div>
+                </div>
+                <div class="card">
+                    <h3>Total Dono</h3>
+                    <div class="card-value" id="totalDono">R$0.00</div>
+                </div>
+                <div class="card">
+                    <h3>Total Barbeiros</h3>
+                    <div class="card-value" id="totalBarbeiros">R$0.00</div>
+                </div>
+            </div>
+            
+            <h3>Últimos Atendimentos</h3>
+            <table id="atendimentosTable">
+                <thead>
+                    <tr>
+                        <th>Data/Hora</th>
+                        <th>Barbeiro</th>
+                        <th>Valor (R$)</th>
+                        <th>Pagamento</th>
+                        <th>% Barbeiro</th>
+                        <th>Dono (R$)</th>
+                        <th>Barbeiro (R$)</th>
+                    </tr>
+                </thead>
+                <tbody id="atendimentosBody">
+                    <!-- Dados serão inseridos via JavaScript -->
+                </tbody>
+            </table>
+            
+            <h3 style="margin-top: 30px;">Resumo por Barbeiro</h3>
+            <table id="barbeirosTable">
+                <thead>
+                    <tr>
+                        <th>Barbeiro</th>
+                        <th>Total Serviços (R$)</th>
+                        <th>Comissão (R$)</th>
+                        <th>Adiantamentos (R$)</th>
+                        <th>Pagamentos (R$)</th>
+                        <th>Saldo (R$)</th>
+                    </tr>
+                </thead>
+                <tbody id="barbeirosBody">
+                    <!-- Dados serão inseridos via JavaScript -->
+                </tbody>
+            </table>
+        </div>
+        
+        <div id="pagamentos" class="tab-content">
+            <h2>Pagamentos aos Barbeiros</h2>
+            
+            <div class="form-group">
+                <label for="barbeiroPagamento">Barbeiro:</label>
+                <select id="barbeiroPagamento" onchange="atualizarInfoPagamento(this.value)">
+                    <option value="">Selecione o barbeiro</option>
+                </select>
+            </div>
+            
+            <div id="infoPagamento" style="display: none;">
+                <h3>Informações para Pagamento</h3>
+                <p>Total de comissões: R$<span id="totalComissao">0.00</span></p>
+                <p>Total de adiantamentos: R$<span id="totalAdiantamentos">0.00</span></p>
+                <p>Total já pago: R$<span id="totalPago">0.00</span></p>
+                <p>Valor a pagar: R$<span id="valorAPagar" class="saldo-positivo">0.00</span></p>
+                <div id="alertaPagamento" class="alerta" style="display: none;"></div>
+                
+                <form id="pagamentoForm">
+                    <div class="form-group">
+                        <label for="valorPagamento">Valor do Pagamento (R$):</label>
+                        <input type="number" id="valorPagamento" step="0.01" min="0" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="metodoPagamento">Método de Pagamento:</label>
+                        <select id="metodoPagamento" required>
+                            <option value="Dinheiro">Dinheiro</option>
+                            <option value="PIX">PIX</option>
+                            <option value="Transferência">Transferência</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="dataPagamento">Data:</label>
+                        <input type="date" id="dataPagamento" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="observacaoPagamento">Observação:</label>
+                        <input type="text" id="observacaoPagamento">
+                    </div>
+                    <button type="submit">Registrar Pagamento</button>
+                </form>
+            </div>
+            
+            <h3 style="margin-top: 30px;">Histórico de Pagamentos</h3>
+            <table id="pagamentosTable">
+                <thead>
+                    <tr>
+                        <th>Data</th>
+                        <th>Barbeiro</th>
+                        <th>Valor (R$)</th>
+                        <th>Método</th>
+                        <th>Observação</th>
+                    </tr>
+                </thead>
+                <tbody id="pagamentosBody">
+                    <!-- Dados serão inseridos via JavaScript -->
+                </tbody>
+            </table>
+        </div>
+        
+        <div id="config" class="tab-content">
+            <h2>Configurações</h2>
+            <form id="configForm">
+                <div class="form-group">
+                    <label for="porcentagemDono">Porcentagem padrão do Dono (%):</label>
+                    <input type="number" id="porcentagemDono" min="0" max="100" value="40" required>
+                </div>
+                <div class="form-group">
+                    <label for="porcentagemBarbeiro">Porcentagem padrão do Barbeiro (%):</label>
+                    <input type="number" id="porcentagemBarbeiro" min="0" max="100" value="60" required>
+                </div>
+                <h3>Barbeiros</h3>
+                <div id="barbeirosConfig">
+                    <!-- Barbeiros serão adicionados aqui -->
+                </div>
+                <button type="button" onclick="adicionarBarbeiro()" style="margin-top: 10px;">Adicionar Barbeiro</button>
+                <button type="submit" style="margin-top: 20px;">Salvar Configurações</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Dados do sistema
+        let sistema = {
+            porcentagemDono: 40,
+            porcentagemBarbeiro: 60,
+            barbeiros: [], // Lista de objetos {nome, ativo}
+            atendimentos: [],
+            adiantamentos: [],
+            pagamentos: []
+        };
+
+        // Elementos do DOM
+        const atendimentoForm = document.getElementById('atendimentoForm');
+        const adiantamentoForm = document.getElementById('adiantamentoForm');
+        const pagamentoForm = document.getElementById('pagamentoForm');
+        const configForm = document.getElementById('configForm');
+        const resultadoDiv = document.getElementById('resultado');
+        const porcentagemBarbeiroAtual = document.getElementById('porcentagemBarbeiroAtual');
+        const barbeiroPagamentoSelect = document.getElementById('barbeiroPagamento');
+        const infoPagamentoDiv = document.getElementById('infoPagamento');
+        
+        // Inicialização
+        document.addEventListener('DOMContentLoaded', function() {
+            carregarDados();
+            document.getElementById('dataAdiantamento').valueAsDate = new Date();
+            document.getElementById('dataPagamento').valueAsDate = new Date();
+            
+            // Atualizar porcentagem do dono quando a do barbeiro muda
+            porcentagemBarbeiroAtual.addEventListener('input', function() {
+                const porcentagemBarbeiro = parseInt(this.value);
+                const porcentagemDono = 100 - porcentagemBarbeiro;
+                
+                document.getElementById('porcentagemDonoDisplay').textContent = porcentagemDono;
+                document.getElementById('porcentagemBarbeiroDisplay').textContent = porcentagemBarbeiro;
+            });
+            
+            // Atualizar valor do pagamento quando mudar o valor a pagar
+            document.getElementById('valorAPagar').addEventListener('DOMSubtreeModified', function() {
+                const valorAPagar = parseFloat(this.textContent) || 0;
+                document.getElementById('valorPagamento').value = valorAPagar > 0 ? valorAPagar.toFixed(2) : '0.00';
+            });
+        });
+        
+        // Atualizar select de barbeiros em todos os formulários
+        function atualizarSelectBarbeiros() {
+            const selects = [
+                document.getElementById('barbeiro'),
+                document.getElementById('barbeiroAdiantamento'),
+                document.getElementById('barbeiroPagamento')
+            ];
+            
+            selects.forEach(select => {
+                // Limpar mantendo o primeiro option
+                const primeiroOption = select.options[0];
+                select.innerHTML = '';
+                select.appendChild(primeiroOption);
+                
+                // Adicionar barbeiros ativos
+                sistema.barbeiros.forEach(barbeiro => {
+                    if (barbeiro.ativo) {
+                        const option = document.createElement('option');
+                        option.value = barbeiro.nome;
+                        option.textContent = barbeiro.nome;
+                        select.appendChild(option);
+                    }
+                });
+            });
+        }
+        
+        // Carregar dados do localStorage
+        function carregarDados() {
+            const dadosSalvos = localStorage.getItem('sistemaBarbearia');
+            if (dadosSalvos) {
+                sistema = JSON.parse(dadosSalvos);
+                atualizarPorcentagens();
+                
+                // Garantir que barbeiros existam
+                if (!sistema.barbeiros || sistema.barbeiros.length === 0) {
+                    sistema.barbeiros = [
+                        {nome: 'João', ativo: true},
+                        {nome: 'Carlos', ativo: true},
+                        {nome: 'Maria', ativo: true}
+                    ];
+                } else if (typeof sistema.barbeiros[0] === 'string') {
+                    // Converter barbeiros antigos para novo formato
+                    sistema.barbeiros = sistema.barbeiros.map(nome => ({nome, ativo: true}));
+                }
+            } else {
+                // Dados iniciais
+                sistema.barbeiros = [
+                    {nome: 'João', ativo: true},
+                    {nome: 'Carlos', ativo: true},
+                    {nome: 'Maria', ativo: true}
+                ];
+            }
+            
+            atualizarSelectBarbeiros();
+            atualizarConfigBarbeiros();
+        }
+        
+        // Salvar dados no localStorage
+        function salvarDados() {
+            localStorage.setItem('sistemaBarbearia', JSON.stringify(sistema));
+        }
+        
+        // Atualizar porcentagens nos inputs
+        function atualizarPorcentagens() {
+            document.getElementById('porcentagemDono').value = sistema.porcentagemDono;
+            document.getElementById('porcentagemBarbeiro').value = sistema.porcentagemBarbeiro;
+            document.getElementById('porcentagemDonoDisplay').textContent = sistema.porcentagemDono;
+            document.getElementById('porcentagemBarbeiroDisplay').textContent = sistema.porcentagemBarbeiro;
+            porcentagemBarbeiroAtual.value = sistema.porcentagemBarbeiro;
+        }
+        
+        // Registrar novo atendimento
+        atendimentoForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const valor = parseFloat(document.getElementById('valor').value);
+            const barbeiro = document.getElementById('barbeiro').value;
+            const metodo = document.getElementById('metodo').value;
+            const porcentagemBarbeiro = parseInt(porcentagemBarbeiroAtual.value);
+            const porcentagemDono = 100 - porcentagemBarbeiro;
+            const data = new Date().toLocaleString();
+            
+            // Calcular distribuição
+            const parteDono = valor * (porcentagemDono / 100);
+            const parteBarbeiro = valor * (porcentagemBarbeiro / 100);
+            
+            // Criar registro
+            const registro = {
+                data,
+                valor,
+                barbeiro,
+                metodo,
+                porcentagemBarbeiro,
+                parteDono,
+                parteBarbeiro
+            };
+            
+            // Atualizar sistema
+            sistema.atendimentos.push(registro);
+            
+            // Mostrar resultado
+            document.getElementById('totalValue').textContent = valor.toFixed(2);
+            document.getElementById('donoValue').textContent = parteDono.toFixed(2);
+            document.getElementById('barbeiroValue').textContent = parteBarbeiro.toFixed(2);
+            document.getElementById('porcentagemDonoDisplay').textContent = porcentagemDono;
+            document.getElementById('porcentagemBarbeiroDisplay').textContent = porcentagemBarbeiro;
+            resultadoDiv.style.display = 'block';
+            
+            // Salvar e atualizar relatórios
+            salvarDados();
+            atualizarRelatorios();
+            
+            // Limpar formulário (mantém a porcentagem)
+            document.getElementById('valor').value = '';
+            document.getElementById('barbeiro').value = '';
+            document.getElementById('metodo').value = 'Dinheiro';
+        });
+        
+        // Função para calcular saldo do barbeiro
+        function calcularSaldoBarbeiro(barbeiro) {
+            if (!barbeiro) return 0;
+            
+            // Calcular total de comissões
+            const comissoes = sistema.atendimentos
+                .filter(a => a.barbeiro === barbeiro)
+                .reduce((sum, a) => sum + a.parteBarbeiro, 0);
+            
+            // Calcular total de adiantamentos pendentes
+            const adiantamentos = sistema.adiantamentos
+                .filter(a => a.barbeiro === barbeiro && a.status === 'Pendente')
+                .reduce((sum, a) => sum + a.valor, 0);
+            
+            // Calcular total de pagamentos já realizados
+            const pagamentos = sistema.pagamentos
+                .filter(p => p.barbeiro === barbeiro)
+                .reduce((sum, p) => sum + p.valor, 0);
+            
+            return comissoes - adiantamentos - pagamentos;
+        }
+        
+        // Atualizar saldo disponível para adiantamento
+        function atualizarSaldoDisponivel() {
+            const barbeiroSelect = document.getElementById('barbeiroAdiantamento');
+            const infoDiv = document.getElementById('infoSaldoBarbeiro');
+            const alertaDiv = document.getElementById('alertaAdiantamento');
+            
+            if (!barbeiroSelect.value) {
+                infoDiv.style.display = 'none';
+                alertaDiv.style.display = 'none';
+                return;
+            }
+            
+            const barbeiro = barbeiroSelect.value;
+            const saldo = calcularSaldoBarbeiro(barbeiro);
+            
+            document.getElementById('saldoDisponivel').textContent = saldo.toFixed(2);
+            infoDiv.style.display = 'block';
+            
+            if (saldo <= 0) {
+                alertaDiv.textContent = `ATENÇÃO: Este barbeiro não tem saldo disponível (R$${Math.abs(saldo).toFixed(2)} em débito)`;
+                alertaDiv.style.display = 'block';
+            } else {
+                alertaDiv.style.display = 'none';
+            }
+        }
+        
+        // Registrar adiantamento
+        adiantamentoForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const barbeiro = document.getElementById('barbeiroAdiantamento').value;
+            const valor = parseFloat(document.getElementById('valorAdiantamento').value);
+            const data = document.getElementById('dataAdiantamento').value;
+            const observacao = document.getElementById('observacaoAdiantamento').value;
+            
+            // Verificar saldo disponível
+            const saldoDisponivel = calcularSaldoBarbeiro(barbeiro);
+            
+            if (valor > saldoDisponivel) {
+                if (!confirm(`ATENÇÃO: Este adiantamento (R$${valor.toFixed(2)}) excede o saldo disponível (R$${saldoDisponivel.toFixed(2)}). O barbeiro ficará com débito de R$${(valor - saldoDisponivel).toFixed(2)}. Deseja continuar?`)) {
+                    return;
+                }
+            }
+            
+            // Criar registro
+            const adiantamento = {
+                id: Date.now(),
+                data,
+                barbeiro,
+                valor,
+                observacao: observacao || 'Sem observação',
+                status: 'Pendente'
+            };
+            
+            // Adicionar ao sistema
+            sistema.adiantamentos.push(adiantamento);
+            
+            // Salvar e atualizar
+            salvarDados();
+            atualizarRelatorios();
+            atualizarTabelaAdiantamentos();
+            atualizarSaldoDisponivel();
+            
+            // Limpar formulário
+            adiantamentoForm.reset();
+            document.getElementById('dataAdiantamento').valueAsDate = new Date();
+            
+            alert('Adiantamento registrado com sucesso!');
+        });
+        
+        // Atualizar informações de pagamento
+        function atualizarInfoPagamento(barbeiro) {
+            const infoDiv = document.getElementById('infoPagamento');
+            const alertaDiv = document.getElementById('alertaPagamento');
+            
+            if (!barbeiro) {
+                infoDiv.style.display = 'none';
+                return;
+            }
+            
+            // Calcular saldo atual
+            const saldoAtual = calcularSaldoBarbeiro(barbeiro);
+            
+            // Calcular totais
+            const comissoes = sistema.atendimentos
+                .filter(a => a.barbeiro === barbeiro)
+                .reduce((sum, a) => sum + a.parteBarbeiro, 0);
+            
+            const adiantamentos = sistema.adiantamentos
+                .filter(a => a.barbeiro === barbeiro && a.status === 'Pendente')
+                .reduce((sum, a) => sum + a.valor, 0);
+            
+            const pagamentos = sistema.pagamentos
+                .filter(p => p.barbeiro === barbeiro)
+                .reduce((sum, p) => sum + p.valor, 0);
+            
+            // Atualizar interface
+            document.getElementById('totalComissao').textContent = comissoes.toFixed(2);
+            document.getElementById('totalAdiantamentos').textContent = adiantamentos.toFixed(2);
+            document.getElementById('totalPago').textContent = pagamentos.toFixed(2);
+            
+            const valorAPagarElement = document.getElementById('valorAPagar');
+            valorAPagarElement.textContent = Math.max(0, saldoAtual).toFixed(2);
+            
+            if (saldoAtual < 0) {
+                valorAPagarElement.className = 'saldo-negativo';
+                valorAPagarElement.textContent = `Débito: R$${Math.abs(saldoAtual).toFixed(2)}`;
+                alertaDiv.textContent = `ATENÇÃO: Este barbeiro está com débito de R$${Math.abs(saldoAtual).toFixed(2)}`;
+                alertaDiv.style.display = 'block';
+            } else {
+                valorAPagarElement.className = 'saldo-positivo';
+                valorAPagarElement.textContent = `A receber: R$${saldoAtual.toFixed(2)}`;
+                alertaDiv.style.display = 'none';
+            }
+            
+            document.getElementById('valorPagamento').value = Math.max(0, saldoAtual).toFixed(2);
+            infoDiv.style.display = 'block';
+        }
+        
+        // Registrar pagamento
+        pagamentoForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const barbeiro = document.getElementById('barbeiroPagamento').value;
+            let valor = parseFloat(document.getElementById('valorPagamento').value);
+            const metodo = document.getElementById('metodoPagamento').value;
+            const data = document.getElementById('dataPagamento').value;
+            const observacao = document.getElementById('observacaoPagamento').value;
+            
+            // Calcular saldo atual
+            const saldoAtual = calcularSaldoBarbeiro(barbeiro);
+            
+            // Verificar se está pagando valor diferente do saldo
+            if (valor > Math.max(0, saldoAtual)) {
+                if (!confirm(`ATENÇÃO: Você está pagando R$${valor.toFixed(2)} mas o valor devido é R$${Math.max(0, saldoAtual).toFixed(2)}. Isso criará um crédito de R$${(valor - Math.max(0, saldoAtual)).toFixed(2)} para o barbeiro. Deseja continuar?`)) {
+                    return;
+                }
+            } else if (valor < Math.max(0, saldoAtual)) {
+    if (!confirm(`ATENÇÃO: Você está pagando R$${valor.toFixed(2)}, mas o valor devido é R$${Math.max(0, saldoAtual).toFixed(2)}. O barbeiro ainda ficará devendo R$${(Math.max(0, saldoAtual) - valor).toFixed(2)}. Deseja continuar?`)) {
+        return;
+    }
+}
+
+            
+            // Criar registro
+            const pagamento = {
+                data,
+                barbeiro,
+                valor,
+                metodo,
+                observacao: observacao || 'Sem observação'
+            };
+            
+            // Adicionar ao sistema
+            sistema.pagamentos.push(pagamento);
+            
+            // Marcar adiantamentos como quitados (até o valor pago)
+            let valorRestante = valor;
+            sistema.adiantamentos
+                .filter(a => a.barbeiro === barbeiro && a.status === 'Pendente')
+                .sort((a, b) => new Date(a.data) - new Date(b.data)) // Quitar os mais antigos primeiro
+                .forEach(adiantamento => {
+                    if (valorRestante <= 0) return;
+                    
+                    const valorQuitado = Math.min(adiantamento.valor, valorRestante);
+                    if (valorQuitado === adiantamento.valor) {
+                        adiantamento.status = `Quitado em ${data}`;
+                    } else {
+                        // Criar novo adiantamento com o valor restante
+                        sistema.adiantamentos.push({
+                            ...adiantamento,
+                            id: Date.now(),
+                            valor: adiantamento.valor - valorQuitado
+                        });
+                        adiantamento.status = `Parcialmente quitado (R$${valorQuitado.toFixed(2)}) em ${data}`;
+                        adiantamento.valor = valorQuitado;
+                    }
+                    
+                    valorRestante -= valorQuitado;
+                });
+            
+            // Salvar e atualizar
+            salvarDados();
+            atualizarRelatorios();
+            atualizarTabelaPagamentos();
+            atualizarTabelaAdiantamentos();
+            atualizarInfoPagamento(barbeiro);
+            
+            // Limpar formulário
+            pagamentoForm.reset();
+            document.getElementById('dataPagamento').valueAsDate = new Date();
+            
+            alert('Pagamento registrado com sucesso!');
+        });
+        
+        // Configurar porcentagens padrão e barbeiros
+        configForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            sistema.porcentagemDono = parseInt(document.getElementById('porcentagemDono').value);
+            sistema.porcentagemBarbeiro = parseInt(document.getElementById('porcentagemBarbeiro').value);
+            
+            // Atualizar também o campo de porcentagem no formulário de atendimento
+            porcentagemBarbeiroAtual.value = sistema.porcentagemBarbeiro;
+            
+            salvarDados();
+            alert('Configurações salvas com sucesso!');
+        });
+        
+        // Adicionar novo barbeiro
+        function adicionarBarbeiro() {
+            const nome = prompt('Digite o nome do novo barbeiro:');
+            if (nome) {
+                sistema.barbeiros.push({nome, ativo: true});
+                salvarDados();
+                atualizarSelectBarbeiros();
+                atualizarConfigBarbeiros();
+                alert('Barbeiro adicionado com sucesso!');
+            }
+        }
+        
+        // Atualizar lista de barbeiros na configuração
+        function atualizarConfigBarbeiros() {
+            const barbeirosConfig = document.getElementById('barbeirosConfig');
+            barbeirosConfig.innerHTML = '';
+            
+            sistema.barbeiros.forEach((barbeiro, index) => {
+                const div = document.createElement('div');
+                div.className = 'form-group';
+                div.style.display = 'flex';
+                div.style.alignItems = 'center';
+                div.style.gap = '10px';
+                
+                div.innerHTML = `
+                    <input type="text" value="${barbeiro.nome}" onchange="atualizarNomeBarbeiro(${index}, this.value)" style="flex: 1;">
+                    <label style="display: flex; align-items: center; gap: 5px;">
+                        <input type="checkbox" ${barbeiro.ativo ? 'checked' : ''} onchange="atualizarStatusBarbeiro(${index}, this.checked)">
+                        Ativo
+                    </label>
+                    <button type="button" onclick="removerBarbeiro(${index})" style="background-color: #e74c3c;">Remover</button>
+                `;
+                
+                barbeirosConfig.appendChild(div);
+            });
+        }
+        
+        // Atualizar nome do barbeiro
+        function atualizarNomeBarbeiro(index, novoNome) {
+            sistema.barbeiros[index].nome = novoNome;
+            salvarDados();
+            atualizarSelectBarbeiros();
+        }
+        
+        // Atualizar status do barbeiro
+        function atualizarStatusBarbeiro(index, ativo) {
+            sistema.barbeiros[index].ativo = ativo;
+            salvarDados();
+            atualizarSelectBarbeiros();
+        }
+        
+        // Remover barbeiro
+        function removerBarbeiro(index) {
+            if (confirm(`Tem certeza que deseja remover ${sistema.barbeiros[index].nome}?`)) {
+                sistema.barbeiros.splice(index, 1);
+                salvarDados();
+                atualizarConfigBarbeiros();
+                atualizarSelectBarbeiros();
+            }
+        }
+        
+        // Atualizar tabela de adiantamentos
+        function atualizarTabelaAdiantamentos() {
+            const tbody = document.getElementById('adiantamentosBody');
+            tbody.innerHTML = '';
+            
+            sistema.adiantamentos.slice().reverse().forEach(adiantamento => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${adiantamento.data}</td>
+                    <td>${adiantamento.barbeiro}</td>
+                    <td>${adiantamento.valor.toFixed(2)}</td>
+                    <td>${adiantamento.observacao}</td>
+                    <td>${adiantamento.status}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+        
+        // Atualizar tabela de pagamentos
+        function atualizarTabelaPagamentos() {
+            const tbody = document.getElementById('pagamentosBody');
+            tbody.innerHTML = '';
+            
+            sistema.pagamentos.slice().reverse().forEach(pagamento => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${pagamento.data}</td>
+                    <td>${pagamento.barbeiro}</td>
+                    <td>${pagamento.valor.toFixed(2)}</td>
+                    <td>${pagamento.metodo}</td>
+                    <td>${pagamento.observacao}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+        
+        // Atualizar relatórios
+        function atualizarRelatorios() {
+            // Atualizar dashboard
+            const totalRecebido = sistema.atendimentos.reduce((sum, a) => sum + a.valor, 0);
+            const totalDono = sistema.atendimentos.reduce((sum, a) => sum + a.parteDono, 0);
+            const totalBarbeiros = sistema.atendimentos.reduce((sum, a) => sum + a.parteBarbeiro, 0);
+            
+            document.getElementById('totalRecebido').textContent = `R$${totalRecebido.toFixed(2)}`;
+            document.getElementById('totalDono').textContent = `R$${totalDono.toFixed(2)}`;
+            document.getElementById('totalBarbeiros').textContent = `R$${totalBarbeiros.toFixed(2)}`;
+            
+            // Atualizar tabela de atendimentos
+            const atendimentosBody = document.getElementById('atendimentosBody');
+            atendimentosBody.innerHTML = '';
+            
+            sistema.atendimentos.slice().reverse().forEach(atendimento => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${atendimento.data}</td>
+                    <td>${atendimento.barbeiro}</td>
+                    <td>${atendimento.valor.toFixed(2)}</td>
+                    <td>${atendimento.metodo}</td>
+                    <td>${atendimento.porcentagemBarbeiro}%</td>
+                    <td>${atendimento.parteDono.toFixed(2)}</td>
+                    <td>${atendimento.parteBarbeiro.toFixed(2)}</td>
+                `;
+                atendimentosBody.appendChild(row);
+            });
+            
+            // Atualizar tabela de barbeiros
+            const barbeirosBody = document.getElementById('barbeirosBody');
+            barbeirosBody.innerHTML = '';
+            
+            sistema.barbeiros.filter(b => b.ativo).forEach(barbeiro => {
+                const nome = barbeiro.nome;
+                
+                // Calcular totais
+                const totalServicos = sistema.atendimentos
+                    .filter(a => a.barbeiro === nome)
+                    .reduce((sum, a) => sum + a.valor, 0);
+                
+                const comissoes = sistema.atendimentos
+                    .filter(a => a.barbeiro === nome)
+                    .reduce((sum, a) => sum + a.parteBarbeiro, 0);
+                
+                const adiantamentos = sistema.adiantamentos
+                    .filter(a => a.barbeiro === nome)
+                    .reduce((sum, a) => sum + a.valor, 0);
+                
+                const pagamentos = sistema.pagamentos
+                    .filter(p => p.barbeiro === nome)
+                    .reduce((sum, p) => sum + p.valor, 0);
+                
+                const saldo = comissoes - pagamentos;
+                
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${nome}</td>
+                    <td>${totalServicos.toFixed(2)}</td>
+                    <td>${comissoes.toFixed(2)}</td>
+                    <td>${adiantamentos.toFixed(2)}</td>
+                    <td>${pagamentos.toFixed(2)}</td>
+                    <td class="${saldo < 0 ? 'saldo-negativo' : 'saldo-positivo'}">${saldo.toFixed(2)}</td>
+                `;
+                barbeirosBody.appendChild(row);
+            });
+            
+            // Atualizar tabelas de adiantamentos e pagamentos
+            atualizarTabelaAdiantamentos();
+            atualizarTabelaPagamentos();
+        }
+        
+        // Trocar entre abas
+        function openTab(tabName) {
+            const tabs = document.getElementsByClassName('tab');
+            for (let i = 0; i < tabs.length; i++) {
+                tabs[i].classList.remove('active');
+            }
+            
+            const tabContents = document.getElementsByClassName('tab-content');
+            for (let i = 0; i < tabContents.length; i++) {
+                tabContents[i].classList.remove('active');
+            }
+            
+            document.getElementById(tabName).classList.add('active');
+            document.querySelector(`.tab[onclick="openTab('${tabName}')"]`).classList.add('active');
+        }
+    </script>
+</body>
+</html>
